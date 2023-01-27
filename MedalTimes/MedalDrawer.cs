@@ -1,26 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using TMPro;
-using TNRD.Zeepkist.MedalTimes.Events;
-using TNRD.Zeepkist.MedalTimes.EventSystem;
+using TNRD.Zeepkist.MedalTimes.Patches;
 using UnityEngine;
-using UnityEngine.TextCore;
 using UnityEngine.UI;
-using UniverseLib;
-using Object = UnityEngine.Object;
 
 namespace TNRD.Zeepkist.MedalTimes
 {
     public class MedalDrawer : MonoBehaviour
     {
-        private TMP_FontAsset cachedFont;
-
-        private SubscriptionContainer subscriptionContainer;
-        private PlayerManager playerManager;
-
-        private LevelIndex.ZeepLevel CurrentLevel => playerManager.currentZeepLevel;
+        private LevelScriptableObject CurrentLevel => PlayerManager.Instance.currentMaster.setupScript.GlobalLevel;
 
         private GameObject canvas;
         private CanvasGroup canvasGroup;
@@ -32,18 +20,25 @@ namespace TNRD.Zeepkist.MedalTimes
 
         private void Awake()
         {
-            subscriptionContainer = new SubscriptionContainer(
-                EventSubscriber.Subscribe<PlayerManagerLoadedEvent>(OnPlayerManagerLoaded),
-                EventSubscriber.Subscribe<LevelLoadedEvent>(OnLevelLoaded),
-                EventSubscriber.Subscribe<QuitGameplayEvent>(OnQuitGameplay),
-                EventSubscriber.Subscribe<QuitAdventureMapEvent>(OnQuitAdventureMap),
-                EventSubscriber.Subscribe<EnableBigBoxEvent>(OnEnableBigBox),
-                EventSubscriber.Subscribe<EnableSmallBoxEvent>(OnEnableSmallBox));
+            GeneralLevelLoader_PrimeForGameplay.PostfixEvent += OnLevelLoaded;
+            PauseMenu_DoQuitAdventureMap.PostfixEvent += OnQuitAdventureMap;
+            PauseMenu_DoQuitGameplay.PostfixEvent += OnQuitGameplay;
+            OnlineChatUI_EnableBigBox.PostfixEvent += OnEnableBigBox;
+            OnlineChatUI_EnableSmallBox.PostfixEvent += OnEnableSmallBox;
         }
 
         private void OnDestroy()
         {
-            subscriptionContainer.UnsubscribeAll();
+            if (canvas != null)
+            {
+                Destroy(canvas);
+            }
+
+            GeneralLevelLoader_PrimeForGameplay.PostfixEvent -= OnLevelLoaded;
+            PauseMenu_DoQuitAdventureMap.PostfixEvent -= OnQuitAdventureMap;
+            PauseMenu_DoQuitGameplay.PostfixEvent -= OnQuitGameplay;
+            OnlineChatUI_EnableBigBox.PostfixEvent -= OnEnableBigBox;
+            OnlineChatUI_EnableSmallBox.PostfixEvent -= OnEnableSmallBox;
         }
 
         private void CreateUI()
@@ -66,7 +61,7 @@ namespace TNRD.Zeepkist.MedalTimes
             goldText = CreateText(group.gameObject, new Vector2(20, -80), size, fontSize, "Gold:");
             silverText = CreateText(group.gameObject, new Vector2(20, -110), size, fontSize, "Silver:");
             bronzeText = CreateText(group.gameObject, new Vector2(20, -140), size, fontSize, "Bronze:");
-            
+
             group.SetLayoutVertical();
 
             SetVisibility(false);
@@ -135,34 +130,33 @@ namespace TNRD.Zeepkist.MedalTimes
             tmp.fontSize = fontSize;
             tmp.alignment = TextAlignmentOptions.MidlineLeft;
 
-            if (cachedFont == null)
-            {
-                Object[] fontAssets = RuntimeHelper.FindObjectsOfTypeAll<TMP_FontAsset>();
-                cachedFont = fontAssets.Where(x => x.name == "Code New Roman b SDF")
-                    .Cast<TMP_FontAsset>()
-                    .FirstOrDefault();
-            }
-
-            tmp.font = cachedFont;
+            rectTransform.sizeDelta = tmp.GetPreferredValues();
 
             return tmp;
         }
 
-        private void OnLevelLoaded(LevelLoadedEvent value)
+        private void OnLevelLoaded()
         {
-            CreateUI();
+            try
+            {
+                CreateUI();
 
-            const string format = "mm\\:ss\\.fff";
-            authorText.text =
-                string.Concat("Author: ", TimeSpan.FromSeconds(CurrentLevel.time_author).ToString(format));
-            goldText.text =
-                string.Concat("Gold:   ", TimeSpan.FromSeconds(CurrentLevel.time_gold).ToString(format));
-            silverText.text =
-                string.Concat("Silver: ", TimeSpan.FromSeconds(CurrentLevel.time_silver).ToString(format));
-            bronzeText.text =
-                string.Concat("Bronze: ", TimeSpan.FromSeconds(CurrentLevel.time_bronze).ToString(format));
+                const string format = "mm\\:ss\\.fff";
+                authorText.text =
+                    string.Concat("Author: ", TimeSpan.FromSeconds(CurrentLevel.TimeAuthor).ToString(format));
+                goldText.text =
+                    string.Concat("Gold:   ", TimeSpan.FromSeconds(CurrentLevel.TimeGold).ToString(format));
+                silverText.text =
+                    string.Concat("Silver: ", TimeSpan.FromSeconds(CurrentLevel.TimeSilver).ToString(format));
+                bronzeText.text =
+                    string.Concat("Bronze: ", TimeSpan.FromSeconds(CurrentLevel.TimeBronze).ToString(format));
 
-            SetVisibility(!playerManager.currentZeepLevel.isTestLevel);
+                SetVisibility(!PlayerManager.Instance.currentMaster.setupScript.GlobalLevel.IsTestLevel);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log(StackTraceUtility.ExtractStringFromException(e));
+            }
         }
 
         private void SetVisibility(bool visible)
@@ -170,27 +164,22 @@ namespace TNRD.Zeepkist.MedalTimes
             canvasGroup.alpha = visible ? 1 : 0;
         }
 
-        private void OnPlayerManagerLoaded(PlayerManagerLoadedEvent value)
-        {
-            playerManager = value.PlayerManager;
-        }
-
-        private void OnQuitGameplay(QuitGameplayEvent value)
+        private void OnQuitGameplay()
         {
             SetVisibility(false);
         }
 
-        private void OnQuitAdventureMap(QuitAdventureMapEvent value)
+        private void OnQuitAdventureMap()
         {
             SetVisibility(false);
         }
 
-        private void OnEnableBigBox(EnableBigBoxEvent value)
+        private void OnEnableBigBox()
         {
             SetVisibility(false);
         }
 
-        private void OnEnableSmallBox(EnableSmallBoxEvent value)
+        private void OnEnableSmallBox()
         {
             SetVisibility(true);
         }

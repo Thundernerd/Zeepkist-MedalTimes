@@ -1,15 +1,16 @@
-﻿using HarmonyLib;
-using TNRD.Zeepkist.MedalTimes.Events;
-using TNRD.Zeepkist.MedalTimes.EventSystem;
+﻿using System;
+using HarmonyLib;
 
 namespace TNRD.Zeepkist.MedalTimes.Patches
 {
-    [HarmonyPatch(typeof(PauseMenu), nameof(PauseMenu.DoQuitGameplay))]
+    [HarmonyPatch(typeof(AdventurePauseUI), nameof(AdventurePauseUI.OnQuit))]
     public class PauseMenu_DoQuitGameplay
     {
+        public static event Action PostfixEvent;
+
         private static void Postfix()
         {
-            EventDispatcher.Dispatch<QuitGameplayEvent>();
+            PostfixEvent?.Invoke();
         }
     }
 }

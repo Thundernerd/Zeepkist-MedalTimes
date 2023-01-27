@@ -1,15 +1,16 @@
-﻿using HarmonyLib;
-using TNRD.Zeepkist.MedalTimes.Events;
-using TNRD.Zeepkist.MedalTimes.EventSystem;
+﻿using System;
+using HarmonyLib;
 
 namespace TNRD.Zeepkist.MedalTimes.Patches
 {
     [HarmonyPatch(typeof(SetupGame), "Awake")]
     public class SetupGame_Awake
     {
+        public static event Action<SetupGame> PostfixEvent; 
+
         private static void Postfix(SetupGame __instance)
         {
-            EventDispatcher.Dispatch<SetupGameLoadedEvent>(__instance);
+            PostfixEvent?.Invoke(__instance);
         }
     }
 }

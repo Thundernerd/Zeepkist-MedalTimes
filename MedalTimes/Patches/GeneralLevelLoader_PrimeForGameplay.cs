@@ -1,15 +1,16 @@
-﻿using HarmonyLib;
-using TNRD.Zeepkist.MedalTimes.Events;
-using TNRD.Zeepkist.MedalTimes.EventSystem;
+﻿using System;
+using HarmonyLib;
 
 namespace TNRD.Zeepkist.MedalTimes.Patches
 {
     [HarmonyPatch(typeof(GeneralLevelLoader), nameof(GeneralLevelLoader.PrimeForGameplay))]
     public class GeneralLevelLoader_PrimeForGameplay
     {
+        public static event Action PostfixEvent;
+        
         private static void Postfix(GameMaster theMaster, string[] theLines, SkyboxManager theSkybox)
         {
-            EventDispatcher.Dispatch(new LevelLoadedEvent(GameMode.Game));
+            PostfixEvent?.Invoke();
         }
     }
 }
