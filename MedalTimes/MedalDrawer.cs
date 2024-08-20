@@ -1,4 +1,5 @@
 ﻿using System;
+using BepInEx.Logging;
 using TMPro;
 using TNRD.Zeepkist.MedalTimes.Patches;
 using UnityEngine;
@@ -8,7 +9,10 @@ namespace TNRD.Zeepkist.MedalTimes
 {
     public class MedalDrawer : MonoBehaviour
     {
+        private static ManualLogSource logger;
+
         private LevelScriptableObject CurrentLevel => PlayerManager.Instance.currentMaster.setupScript.GlobalLevel;
+        private bool IsTestLevel => PlayerManager.Instance.currentMaster.setupScript.GlobalLevel.IsTestLevel;
 
         private GameObject canvas;
         private CanvasGroup canvasGroup;
@@ -18,13 +22,38 @@ namespace TNRD.Zeepkist.MedalTimes
         private TextMeshProUGUI silverText;
         private TextMeshProUGUI bronzeText;
 
+        private bool canBeVisible;
+
+        private bool IsVisible => canvasGroup.alpha > 0;
+
+        private TMP_FontAsset fontAsset;
+        private TMP_SpriteAsset spriteAsset;
+
         private void Awake()
         {
+            logger = BepInEx.Logging.Logger.CreateLogSource("MedalTimes");
+
             GeneralLevelLoader_PrimeForGameplay.PostfixEvent += OnLevelLoaded;
             PauseMenu_DoQuitAdventureMap.PostfixEvent += OnQuitAdventureMap;
             PauseMenu_DoQuitGameplay.PostfixEvent += OnQuitGameplay;
             OnlineChatUI_EnableBigBox.PostfixEvent += OnEnableBigBox;
             OnlineChatUI_EnableSmallBox.PostfixEvent += OnEnableSmallBox;
+
+            Plugin.ShowBronzeTime.SettingChanged += (sender, args) => { CreateMedalTimes(); };
+            Plugin.ShowSilverTime.SettingChanged += (sender, args) => { CreateMedalTimes(); };
+            Plugin.ShowGoldTime.SettingChanged += (sender, args) => { CreateMedalTimes(); };
+            Plugin.ShowAuthorTime.SettingChanged += (sender, args) => { CreateMedalTimes(); };
+            Plugin.AnchorPoint.SettingChanged += (sender, args) => { CreateMedalTimes(); };
+            Plugin.HorizontalOffset.SettingChanged += (sender, args) => { CreateMedalTimes(); };
+            Plugin.VerticalOffset.SettingChanged += (sender, args) => { CreateMedalTimes(); };
+
+            fontAsset = Plugin.AssetBundle.LoadAsset<TMP_FontAsset>("ComicHelvetic_Heavy SDF");
+            spriteAsset = Plugin.AssetBundle.LoadAsset<TMP_SpriteAsset>("medals");
+
+            if (fontAsset == null || spriteAsset == null)
+            {
+                logger.LogError("Unable to load font or sprite asset");
+            }
         }
 
         private void OnDestroy()
@@ -39,6 +68,17 @@ namespace TNRD.Zeepkist.MedalTimes
             PauseMenu_DoQuitGameplay.PostfixEvent -= OnQuitGameplay;
             OnlineChatUI_EnableBigBox.PostfixEvent -= OnEnableBigBox;
             OnlineChatUI_EnableSmallBox.PostfixEvent -= OnEnableSmallBox;
+        }
+
+        private void Update()
+        {
+            if (!canBeVisible)
+                return;
+
+            if (Input.GetKeyDown(Plugin.ToggleMedalTimes.Value))
+            {
+                SetVisibility(!IsVisible);
+            }
         }
 
         private void CreateUI()
@@ -57,14 +97,21 @@ namespace TNRD.Zeepkist.MedalTimes
             CreateCanvas(canvas);
             VerticalLayoutGroup group = CreateGroup(canvas);
 
-            authorText = CreateText(group.gameObject, new Vector2(20, -50), size, fontSize, "Author:");
-            goldText = CreateText(group.gameObject, new Vector2(20, -80), size, fontSize, "Gold:");
-            silverText = CreateText(group.gameObject, new Vector2(20, -110), size, fontSize, "Silver:");
-            bronzeText = CreateText(group.gameObject, new Vector2(20, -140), size, fontSize, "Bronze:");
+            if (Plugin.ShowAuthorTime.Value)
+                authorText = CreateText(group.gameObject, new Vector2(20, -50), size, fontSize, "<sprite index=0>");
+
+            if (Plugin.ShowGoldTime.Value)
+                goldText = CreateText(group.gameObject, new Vector2(20, -80), size, fontSize, "<sprite index=1>");
+
+            if (Plugin.ShowSilverTime.Value)
+                silverText = CreateText(group.gameObject, new Vector2(20, -110), size, fontSize, "<sprite index=2>");
+
+            if (Plugin.ShowBronzeTime.Value)
+                bronzeText = CreateText(group.gameObject, new Vector2(20, -140), size, fontSize, "<sprite index=3>");
 
             group.SetLayoutVertical();
 
-            SetVisibility(false);
+            SetVisibility(Plugin.ShowMedalTimes.Value && !IsTestLevel);
         }
 
         private void CreateCanvas(GameObject parent)
@@ -90,15 +137,15 @@ namespace TNRD.Zeepkist.MedalTimes
             RectTransform rectTransform = group.AddComponent<RectTransform>();
             rectTransform.anchorMin = Vector2.zero;
             rectTransform.anchorMax = Vector2.one;
-            rectTransform.anchoredPosition = Vector2.zero;
+            rectTransform.anchoredPosition = new Vector2(Plugin.HorizontalOffset.Value, Plugin.VerticalOffset.Value);
             rectTransform.sizeDelta = Vector2.zero;
             rectTransform.pivot = new Vector2(0.5f, 0.5f);
 
             VerticalLayoutGroup verticalLayoutGroup = group.AddComponent<VerticalLayoutGroup>();
-            verticalLayoutGroup.childAlignment = TextAnchor.MiddleLeft;
+            verticalLayoutGroup.childAlignment = (TextAnchor)Enum.Parse(typeof(TextAnchor), Plugin.AnchorPoint.Value);
             verticalLayoutGroup.spacing = 10;
             verticalLayoutGroup.padding = new RectOffset(20, 20, 20, 20);
-            verticalLayoutGroup.childForceExpandWidth = true;
+            verticalLayoutGroup.childForceExpandWidth = false;
             verticalLayoutGroup.childForceExpandHeight = false;
             verticalLayoutGroup.childControlWidth = true;
             verticalLayoutGroup.childControlHeight = true;
@@ -127,6 +174,8 @@ namespace TNRD.Zeepkist.MedalTimes
 
             TextMeshProUGUI tmp = text.AddComponent<TextMeshProUGUI>();
             tmp.text = content;
+            tmp.font = fontAsset;
+            tmp.spriteAsset = spriteAsset;
             tmp.fontSize = fontSize;
             tmp.alignment = TextAlignmentOptions.MidlineLeft;
 
@@ -137,50 +186,86 @@ namespace TNRD.Zeepkist.MedalTimes
 
         private void OnLevelLoaded()
         {
+            canBeVisible = true;
+            CreateMedalTimes();
+        }
+
+        private void CreateMedalTimes()
+        {
+            if (!CanCreateMedalTimes())
+            {
+                logger.LogInfo("Cannot create medal times!");
+                return;
+            }
+
             try
             {
                 CreateUI();
-
-                const string format = "mm\\:ss\\.fff";
-                authorText.text =
-                    string.Concat("Author: ", TimeSpan.FromSeconds(CurrentLevel.TimeAuthor).ToString(format));
-                goldText.text =
-                    string.Concat("Gold:   ", TimeSpan.FromSeconds(CurrentLevel.TimeGold).ToString(format));
-                silverText.text =
-                    string.Concat("Silver: ", TimeSpan.FromSeconds(CurrentLevel.TimeSilver).ToString(format));
-                bronzeText.text =
-                    string.Concat("Bronze: ", TimeSpan.FromSeconds(CurrentLevel.TimeBronze).ToString(format));
-
-                SetVisibility(!PlayerManager.Instance.currentMaster.setupScript.GlobalLevel.IsTestLevel);
+                UpdateText();
+                SetVisibility(!IsTestLevel);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                Plugin.Log(StackTraceUtility.ExtractStringFromException(e));
+                // Left empty on purpose
             }
+        }
+
+        private bool CanCreateMedalTimes()
+        {
+            try
+            {
+                bool _ = PlayerManager.Instance.currentMaster.setupScript.GlobalLevel.IsTestLevel;
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        private void UpdateText()
+        {
+            const string format = "mm\\:ss\\.fff";
+            authorText.text =
+                string.Concat("<sprite index=0> ", TimeSpan.FromSeconds(CurrentLevel.TimeAuthor).ToString(format));
+            goldText.text =
+                string.Concat("<sprite index=1> ", TimeSpan.FromSeconds(CurrentLevel.TimeGold).ToString(format));
+            silverText.text =
+                string.Concat("<sprite index=2> ", TimeSpan.FromSeconds(CurrentLevel.TimeSilver).ToString(format));
+            bronzeText.text =
+                string.Concat("<sprite index=3> ", TimeSpan.FromSeconds(CurrentLevel.TimeBronze).ToString(format));
         }
 
         private void SetVisibility(bool visible)
         {
-            canvasGroup.alpha = visible ? 1 : 0;
+            if (canvasGroup == null)
+                return;
+
+            int alpha = visible && Plugin.ShowMedalTimes.Value ? 1 : 0;
+            canvasGroup.alpha = alpha;
         }
 
         private void OnQuitGameplay()
         {
+            canBeVisible = false;
             SetVisibility(false);
         }
 
         private void OnQuitAdventureMap()
         {
+            canBeVisible = false;
             SetVisibility(false);
         }
 
         private void OnEnableBigBox()
         {
+            canBeVisible = false;
             SetVisibility(false);
         }
 
         private void OnEnableSmallBox()
         {
+            canBeVisible = true;
             SetVisibility(true);
         }
     }

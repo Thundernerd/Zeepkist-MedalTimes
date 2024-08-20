@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net45</TargetFramework>
+        <TargetFramework>net472</TargetFramework>
         <AssemblyName>net.tnrd.zeepkist.medaltimes</AssemblyName>
-        <Version>4.0.0</Version>
+        <Version>5.3.0</Version>
+        <Deterministic>false</Deterministic>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>latest</LangVersion>
         <RootNamespace>TNRD.Zeepkist.MedalTimes</RootNamespace>
@@ -15,11 +16,7 @@
         <PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all" />
         <PackageReference Include="BepInEx.Core" Version="5.4.21" />
         <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />
-        <PackageReference Include="Krafs.Publicizer" Version="2.1.0">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="UnityEngine.Modules" Version="2021.3.10" IncludeAssets="compile" />
+        <PackageReference Include="ZeepSDK" Version="1.31.0-alpha" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
@@ -28,21 +25,5 @@
 
     <ItemGroup>
         <Reference Include="netstandard, Version=2.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <Reference Include="Unity.TextMeshPro">
-            <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Zeepkist\Zeepkist_Data\Managed\Unity.TextMeshPro.dll</HintPath>
-        </Reference>
-        <Reference Include="UnityEngine.UI">
-            <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Zeepkist\Zeepkist_Data\Managed\UnityEngine.UI.dll</HintPath>
-        </Reference>
-        <Reference Include="Zeepkist">
-            <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Zeepkist\Zeepkist_Data\Managed\Zeepkist.dll</HintPath>
-        </Reference>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Publicize Include="Zeepkist" />
     </ItemGroup>
 </Project>
