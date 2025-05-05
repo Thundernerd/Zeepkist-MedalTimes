@@ -10,9 +10,8 @@ namespace TNRD.Zeepkist.MedalTimes
     public class MedalDrawer : MonoBehaviour
     {
         private static ManualLogSource logger;
-
-        private LevelScriptableObject CurrentLevel => PlayerManager.Instance.currentMaster.setupScript.GlobalLevel;
-        private bool IsTestLevel => PlayerManager.Instance.currentMaster.setupScript.GlobalLevel.IsTestLevel;
+        private static LevelScriptableObject CurrentLevel => PlayerManager.Instance.currentMaster.setupScript.GlobalLevel;
+        private static bool IsTestLevel => PlayerManager.Instance.currentMaster.setupScript.GlobalLevel.IsTestLevel;
 
         private GameObject canvas;
         private CanvasGroup canvasGroup;
@@ -34,6 +33,7 @@ namespace TNRD.Zeepkist.MedalTimes
             logger = BepInEx.Logging.Logger.CreateLogSource("MedalTimes");
 
             GeneralLevelLoader_PrimeForGameplay.PostfixEvent += OnLevelLoaded;
+            GeneralLevelLoader_PrimeForGameplay_v15.PostfixEvent += OnLevelLoaded;
             PauseMenu_DoQuitAdventureMap.PostfixEvent += OnQuitAdventureMap;
             PauseMenu_DoQuitGameplay.PostfixEvent += OnQuitGameplay;
             OnlineChatUI_EnableBigBox.PostfixEvent += OnEnableBigBox;

@@ -3,7 +3,7 @@
     <PropertyGroup>
         <TargetFramework>net472</TargetFramework>
         <AssemblyName>net.tnrd.zeepkist.medaltimes</AssemblyName>
-        <Version>5.3.0</Version>
+        <Version>5.3.1</Version>
         <Deterministic>false</Deterministic>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>latest</LangVersion>
@@ -16,7 +16,7 @@
         <PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all" />
         <PackageReference Include="BepInEx.Core" Version="5.4.21" />
         <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />
-        <PackageReference Include="ZeepSDK" Version="1.31.0-alpha" />
+        <PackageReference Include="ZeepSDK" Version="1.43.0" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">

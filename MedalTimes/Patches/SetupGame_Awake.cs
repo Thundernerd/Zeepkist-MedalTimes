@@ -3,7 +3,7 @@ using HarmonyLib;
 
 namespace TNRD.Zeepkist.MedalTimes.Patches
 {
-    [HarmonyPatch(typeof(SetupGame), "Awake")]
+    [HarmonyPatch(typeof(SetupGame), nameof(SetupGame.Awake))]
     public class SetupGame_Awake
     {
         public static event Action<SetupGame> PostfixEvent; 
